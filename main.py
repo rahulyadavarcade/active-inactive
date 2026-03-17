@@ -68,7 +68,7 @@ def check_expiration(db):
     """Check if the currently active user (if any) has expired (3 minutes)."""
     active_user = db.query(User).filter(User.status == "active").first()
     if active_user and active_user.activated_at:
-        if datetime.utcnow() - active_user.activated_at > timedelta(minutes=3):
+        if datetime.utcnow() - active_user.activated_at > timedelta(minutes=2):
             active_user.status = "inactive"
             active_user.activated_at = None
             db.commit()
@@ -77,29 +77,17 @@ def check_expiration(db):
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 @app.post("/api/login")
 def login(req: LoginRequest, db=Depends(get_db)):
-    """Log in or register a user by email and username. Returns current user info."""
+    """Log in an existing user by email. Returns current user info."""
     check_expiration(db)
     
     # Check if user exists by email
     user = db.query(User).filter(User.email == req.email).first()
     
     if not user:
-        # Check if username is already taken
-        if not req.username:
-             raise HTTPException(status_code=400, detail="Username is required for new users.")
-             
-        existing_username = db.query(User).filter(User.username == req.username).first()
-        if existing_username:
-            raise HTTPException(status_code=400, detail="Username already taken.")
-            
-        user = User(email=req.email, username=req.username, status="inactive")
-        db.add(user)
-        try:
-            db.commit()
-            db.refresh(user)
-        except Exception as e:
-            db.rollback()
-            raise HTTPException(status_code=400, detail="Could not create user.")
+        raise HTTPException(
+            status_code=403, 
+            detail="You are not a member. Please contact the admin to have your account added."
+        )
     
     return {"email": user.email, "username": user.username, "status": user.status}
 
