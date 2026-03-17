@@ -1,9 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from datetime import datetime, timedelta
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -16,9 +17,11 @@ Base = declarative_base()
 
 class User(Base):
     __tablename__ = "users"
-    id     = Column(Integer, primary_key=True, index=True)
-    email  = Column(String, unique=True, index=True, nullable=False)
-    status = Column(String, default="inactive")
+    id           = Column(Integer, primary_key=True, index=True)
+    email        = Column(String, unique=True, index=True, nullable=False)
+    username     = Column(String, unique=True, index=True, nullable=False)
+    status       = Column(String, default="inactive")
+    activated_at = Column(DateTime, nullable=True)
 
 
 Base.metadata.create_all(bind=engine)
@@ -43,6 +46,11 @@ def read_root():
 
 
 # ── Pydantic Schemas ───────────────────────────────────────────────────────────
+class LoginRequest(BaseModel):
+    email: str
+    username: str = None  # Optional if logging in existing user
+
+
 class EmailRequest(BaseModel):
     email: str
 
@@ -56,25 +64,50 @@ def get_db():
         db.close()
 
 
+def check_expiration(db):
+    """Check if the currently active user (if any) has expired (3 minutes)."""
+    active_user = db.query(User).filter(User.status == "active").first()
+    if active_user and active_user.activated_at:
+        if datetime.utcnow() - active_user.activated_at > timedelta(minutes=3):
+            active_user.status = "inactive"
+            active_user.activated_at = None
+            db.commit()
+
+
 # ── Endpoints ──────────────────────────────────────────────────────────────────
-from fastapi import Depends
-
-
 @app.post("/api/login")
-def login(req: EmailRequest, db=Depends(get_db)):
-    """Log in or register a user by email. Returns current user info."""
+def login(req: LoginRequest, db=Depends(get_db)):
+    """Log in or register a user by email and username. Returns current user info."""
+    check_expiration(db)
+    
+    # Check if user exists by email
     user = db.query(User).filter(User.email == req.email).first()
+    
     if not user:
-        user = User(email=req.email, status="inactive")
+        # Check if username is already taken
+        if not req.username:
+             raise HTTPException(status_code=400, detail="Username is required for new users.")
+             
+        existing_username = db.query(User).filter(User.username == req.username).first()
+        if existing_username:
+            raise HTTPException(status_code=400, detail="Username already taken.")
+            
+        user = User(email=req.email, username=req.username, status="inactive")
         db.add(user)
-        db.commit()
-        db.refresh(user)
-    return {"email": user.email, "status": user.status}
+        try:
+            db.commit()
+            db.refresh(user)
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=400, detail="Could not create user.")
+    
+    return {"email": user.email, "username": user.username, "status": user.status}
 
 
 @app.post("/api/activate")
 def activate(req: EmailRequest, db=Depends(get_db)):
-    """Activate a user. Fails if any other user is already active."""
+    """Activate a user. Fails if any other user is already active (after checking expiration)."""
+    check_expiration(db)
     # Check for any currently active user
     active_user = db.query(User).filter(User.status == "active").first()
     if active_user and active_user.email != req.email:
@@ -88,6 +121,7 @@ def activate(req: EmailRequest, db=Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found. Please login first.")
 
     user.status = "active"
+    user.activated_at = datetime.utcnow()
     db.commit()
     db.refresh(user)
     return {"email": user.email, "status": user.status}
@@ -101,6 +135,7 @@ def deactivate(req: EmailRequest, db=Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found. Please login first.")
 
     user.status = "inactive"
+    user.activated_at = None
     db.commit()
     db.refresh(user)
     return {"email": user.email, "status": user.status}
@@ -108,8 +143,9 @@ def deactivate(req: EmailRequest, db=Depends(get_db)):
 
 @app.get("/api/active_user")
 def get_active_user(db=Depends(get_db)):
-    """Return the currently active user, or null if none."""
+    """Return the currently active user (after checking expiration), or null if none."""
+    check_expiration(db)
     active_user = db.query(User).filter(User.status == "active").first()
     if active_user:
-        return {"email": active_user.email}
-    return {"email": None}
+        return {"email": active_user.email, "username": active_user.username}
+    return {"email": None, "username": None}

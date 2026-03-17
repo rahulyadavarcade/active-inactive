@@ -2,20 +2,23 @@
 const API = '';  // same origin
 let currentEmail = null;
 let pollInterval = null;
+let currentLocalStatus = 'inactive'; // track local status to detect auto-inactivation
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
-const loginScreen    = document.getElementById('login-screen');
-const dashboardScreen= document.getElementById('dashboard-screen');
-const loginForm      = document.getElementById('login-form');
-const emailInput     = document.getElementById('email-input');
-const loginError     = document.getElementById('login-error');
-const displayEmail   = document.getElementById('display-email');
+const loginScreen = document.getElementById('login-screen');
+const dashboardScreen = document.getElementById('dashboard-screen');
+const loginForm = document.getElementById('login-form');
+const emailInput = document.getElementById('email-input');
+const usernameInput = document.getElementById('username-input');
+const loginError = document.getElementById('login-error');
+const displayEmail = document.getElementById('display-email');
+const displayUsername = document.getElementById('display-username');
 const avatarInitials = document.getElementById('avatar-initials');
-const statusBadge    = document.getElementById('status-badge');
-const btnOn          = document.getElementById('btn-on');
-const btnOff         = document.getElementById('btn-off');
-const toggleMsg      = document.getElementById('toggle-msg');
-const logoutBtn      = document.getElementById('logout-btn');
+const statusBadge = document.getElementById('status-badge');
+const btnOn = document.getElementById('btn-on');
+const btnOff = document.getElementById('btn-off');
+const toggleMsg = document.getElementById('toggle-msg');
+const logoutBtn = document.getElementById('logout-btn');
 const activeUserDisplay = document.getElementById('active-user-display');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -33,22 +36,29 @@ function showMsg(el, text, type = '') {
   }
 }
 
-function setStatus(status) {
+function setStatus(status, isAuto = false) {
+  currentLocalStatus = status;
   if (status === 'active') {
     statusBadge.textContent = '● Active';
     statusBadge.classList.add('active-badge');
   } else {
     statusBadge.textContent = '● Inactive';
     statusBadge.classList.remove('active-badge');
+    if (isAuto) {
+      showMsg(toggleMsg, '⏱ Session timed out after 3 minutes.', 'error');
+    }
   }
 }
 
-function renderActiveUser(email) {
+function renderActiveUser(email, username) {
   if (email) {
     activeUserDisplay.innerHTML = `
       <div class="active-email-row">
-        <div class="active-avatar">${initials(email)}</div>
-        <div class="active-email-text">${email}</div>
+        <div class="active-avatar">${initials(username || email)}</div>
+        <div class="active-email-text">
+          <div style="font-weight: 700; color: #fff;">${username || 'User'}</div>
+          <div style="font-size: 0.8rem; opacity: 0.8;">${email}</div>
+        </div>
       </div>`;
   } else {
     activeUserDisplay.innerHTML = `
@@ -62,10 +72,17 @@ function renderActiveUser(email) {
 // ── Polling ───────────────────────────────────────────────────────────────────
 async function pollActiveUser() {
   try {
-    const res  = await fetch(`${API}/api/active_user`);
+    const res = await fetch(`${API}/api/active_user`);
     const data = await res.json();
-    renderActiveUser(data.email);
-  } catch (_) {/* silent */}
+    renderActiveUser(data.email, data.username);
+
+    // Auto-inactivation detection:
+    if (currentEmail) {
+      if (data.email !== currentEmail && currentLocalStatus === 'active') {
+        setStatus('inactive', true);
+      }
+    }
+  } catch (_) {/* silent */ }
 }
 
 function startPolling() {
@@ -90,7 +107,8 @@ function showLogin() {
 function showDashboard(user) {
   currentEmail = user.email;
   displayEmail.textContent = user.email;
-  avatarInitials.textContent = initials(user.email);
+  displayUsername.textContent = user.username;
+  avatarInitials.textContent = initials(user.username || user.email);
   setStatus(user.status);
   toggleMsg.classList.add('hidden');
 
@@ -103,14 +121,15 @@ function showDashboard(user) {
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = emailInput.value.trim();
-  if (!email) return;
+  const username = usernameInput.value.trim();
+  if (!email || !username) return;
 
   loginError.classList.add('hidden');
   try {
-    const res  = await fetch(`${API}/api/login`, {
+    const res = await fetch(`${API}/api/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, username }),
     });
 
     if (!res.ok) {
@@ -138,7 +157,7 @@ logoutBtn.addEventListener('click', async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: currentEmail }),
       });
-    } catch (_) {/* silent */}
+    } catch (_) {/* silent */ }
   }
   currentEmail = null;
   showLogin();
@@ -148,7 +167,7 @@ logoutBtn.addEventListener('click', async () => {
 btnOn.addEventListener('click', async () => {
   if (!currentEmail) return;
   try {
-    const res  = await fetch(`${API}/api/activate`, {
+    const res = await fetch(`${API}/api/activate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: currentEmail }),
@@ -171,7 +190,7 @@ btnOn.addEventListener('click', async () => {
 btnOff.addEventListener('click', async () => {
   if (!currentEmail) return;
   try {
-    const res  = await fetch(`${API}/api/deactivate`, {
+    const res = await fetch(`${API}/api/deactivate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: currentEmail }),
