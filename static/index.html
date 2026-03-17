@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Log — Status Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- ── Background Blobs ─────────────────────────────────── -->
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+
+  <!-- ── Login Screen ─────────────────────────────────────── -->
+  <main id="login-screen" class="screen active">
+    <div class="card login-card">
+      <div class="logo">
+        <span class="logo-icon">✉</span>
+        <h1>Email<span class="accent">Log</span></h1>
+      </div>
+      <p class="subtitle">Sign in with your email to get started</p>
+
+      <form id="login-form" autocomplete="off">
+        <div class="input-group">
+          <label for="email-input">Email Address</label>
+          <input
+            type="email"
+            id="email-input"
+            placeholder="you@example.com"
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">
+          <span>Sign In</span>
+          <span class="btn-arrow">→</span>
+        </button>
+        <p id="login-error" class="error-msg hidden"></p>
+      </form>
+    </div>
+  </main>
+
+  <!-- ── Dashboard Screen ─────────────────────────────────── -->
+  <main id="dashboard-screen" class="screen">
+    <header class="topbar">
+      <div class="logo small">
+        <span class="logo-icon">✉</span>
+        <span>Email<span class="accent">Log</span></span>
+      </div>
+      <button id="logout-btn" class="btn btn-ghost">Logout</button>
+    </header>
+
+    <div class="dashboard-layout">
+
+      <!-- Left: User Panel -->
+      <section class="card user-panel">
+        <div class="user-info">
+          <div class="avatar" id="avatar-initials">?</div>
+          <div>
+            <p class="user-label">Logged in as</p>
+            <p class="user-email" id="display-email">–</p>
+          </div>
+        </div>
+
+        <div class="status-badge-wrap">
+          <span class="status-badge" id="status-badge">Inactive</span>
+        </div>
+
+        <div class="toggle-buttons">
+          <button id="btn-on" class="btn btn-on">
+            <span class="btn-icon">⚡</span> ON
+          </button>
+          <button id="btn-off" class="btn btn-off">
+            <span class="btn-icon">✕</span> OFF
+          </button>
+        </div>
+
+        <p id="toggle-msg" class="toggle-msg hidden"></p>
+      </section>
+
+      <!-- Right: Active User Panel -->
+      <section class="card active-panel">
+        <h2 class="panel-title">
+          <span class="pulse-dot"></span>
+          Currently Active
+        </h2>
+
+        <div id="active-user-display" class="active-user-display">
+          <div class="no-active">
+            <span class="no-active-icon">🔴</span>
+            <p>No active user right now</p>
+          </div>
+        </div>
+
+        <p class="refresh-hint">Auto-refreshes every 4 seconds</p>
+      </section>
+
+    </div>
+  </main>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
