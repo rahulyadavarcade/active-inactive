@@ -20,6 +20,9 @@ const btnOff = document.getElementById('btn-off');
 const toggleMsg = document.getElementById('toggle-msg');
 const logoutBtn = document.getElementById('logout-btn');
 const activeUserDisplay = document.getElementById('active-user-display');
+const adminAction = document.getElementById('admin-action');
+
+const ADMIN_EMAILS = ["rahulyadavstevesai@gmail.com", "harshjaiswal.linuxbean@gmail.com"];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function initials(email) {
@@ -97,14 +100,17 @@ function stopPolling() {
 
 // ── Screens ───────────────────────────────────────────────────────────────────
 function showLogin() {
+  localStorage.removeItem('toilet_user');
   dashboardScreen.classList.remove('active');
   loginScreen.classList.add('active');
   emailInput.value = '';
+  usernameInput.value = '';
   loginError.classList.add('hidden');
   stopPolling();
 }
 
 function showDashboard(user) {
+  localStorage.setItem('toilet_user', JSON.stringify(user));
   currentEmail = user.email;
   displayEmail.textContent = user.email;
   displayUsername.textContent = user.username;
@@ -115,6 +121,13 @@ function showDashboard(user) {
   loginScreen.classList.remove('active');
   dashboardScreen.classList.add('active');
   startPolling();
+
+  // Show admin link if authorized
+  if (ADMIN_EMAILS.includes(user.email)) {
+    adminAction.classList.remove('hidden');
+  } else {
+    adminAction.classList.add('hidden');
+  }
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────
@@ -208,3 +221,12 @@ btnOff.addEventListener('click', async () => {
     showMsg(toggleMsg, 'Network error. Please try again.', 'error');
   }
 });
+// ── Init ──────────────────────────────────────────────────────────────────────
+const savedUser = localStorage.getItem('toilet_user');
+if (savedUser) {
+  try {
+    showDashboard(JSON.parse(savedUser));
+  } catch (_) {
+    localStorage.removeItem('toilet_user');
+  }
+}

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -55,6 +55,14 @@ class EmailRequest(BaseModel):
     email: str
 
 
+class UserCreate(BaseModel):
+    email: str
+    username: str
+
+
+# ── Constants ───────────────────────────────────────────────────────────────
+ADMIN_EMAILS = ["rahulyadavstevesai@gmail.com", "harshjaiswal.linuxbean@gmail.com"]
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 def get_db():
     db = SessionLocal()
@@ -72,6 +80,12 @@ def check_expiration(db):
             active_user.status = "inactive"
             active_user.activated_at = None
             db.commit()
+
+
+def verify_admin(admin_email: str = Header(None)):
+    if not admin_email or admin_email not in ADMIN_EMAILS:
+        raise HTTPException(status_code=403, detail="Admin access denied.")
+    return admin_email
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
@@ -137,3 +151,41 @@ def get_active_user(db=Depends(get_db)):
     if active_user:
         return {"email": active_user.email, "username": active_user.username}
     return {"email": None, "username": None}
+
+
+# ── Admin Endpoints ───────────────────────────────────────────────────────────
+@app.get("/admin")
+def serve_admin():
+    return FileResponse("static/admin.html")
+
+
+@app.get("/api/users")
+def list_users(db=Depends(get_db), _=Depends(verify_admin)):
+    users = db.query(User).all()
+    return [{"email": u.email, "username": u.username, "status": u.status} for u in users]
+
+
+@app.post("/api/users")
+def add_user(req: UserCreate, db=Depends(get_db), _=Depends(verify_admin)):
+    # Check if email exists
+    if db.query(User).filter(User.email == req.email).first():
+        raise HTTPException(status_code=400, detail="Email already exists.")
+    # Check if username exists
+    if db.query(User).filter(User.username == req.username).first():
+        raise HTTPException(status_code=400, detail="Username already exists.")
+    
+    user = User(email=req.email, username=req.username, status="inactive")
+    db.add(user)
+    db.commit()
+    return {"message": "User added successfully"}
+
+
+@app.delete("/api/users/{email}")
+def delete_user(email: str, db=Depends(get_db), _=Depends(verify_admin)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    
+    db.delete(user)
+    db.commit()
+    return {"message": "User deleted successfully"}

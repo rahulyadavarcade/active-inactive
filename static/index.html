@@ -75,13 +75,17 @@
                     <span class="status-badge" id="status-badge">Inactive</span>
                 </div>
 
-                <div class="toggle-buttons">
-                    <button id="btn-on" class="btn btn-on">
-                        <span class="btn-icon">⚡</span> ON
-                    </button>
-                    <button id="btn-off" class="btn btn-off">
-                        <span class="btn-icon">✕</span> OFF
-                    </button>
+                <div class="actions">
+                    <button id="btn-on" class="btn btn-primary" title="Mark as Active">ON</button>
+                    <button id="btn-off" class="btn btn-secondary" title="Mark as Inactive">OFF</button>
+                </div>
+
+                <div id="admin-action" class="hidden"
+                    style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+                    <a href="/admin" class="btn btn-ghost btn-full"
+                        style="text-decoration: none; justify-content: center;">
+                        <span>⚙ Manage Users (Admin)</span>
+                    </a>
                 </div>
 
                 <p id="toggle-msg" class="toggle-msg hidden"></p>

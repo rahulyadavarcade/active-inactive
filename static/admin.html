@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Panel — Toilet Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="/static/style.css" />
+    <style>
+        .admin-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 6rem 2rem 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .user-table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        td:first-child {
+            border-left: 1px solid var(--border);
+            border-radius: 12px 0 0 12px;
+        }
+
+        td:last-child {
+            border-right: 1px solid var(--border);
+            border-radius: 0 12px 12px 0;
+        }
+
+        .delete-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: var(--red);
+            color: #fff;
+        }
+
+        .add-user-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 1rem;
+            align-items: end;
+        }
+
+        @media (max-width: 600px) {
+            .add-user-form {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <header class="topbar">
+        <div class="logo small">
+            <span class="logo-icon">✉</span>
+            <span>Toilet<span class="accent">Admin</span></span>
+        </div>
+        <a href="/" class="btn btn-ghost">Back to Login</a>
+    </header>
+
+    <main class="admin-container">
+        <section class="card">
+            <h2 style="margin-bottom: 1.5rem;">Add New Member</h2>
+            <form id="add-user-form" class="add-user-form">
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <input type="email" id="new-email" placeholder="email@example.com" required />
+                </div>
+                <div class="input-group">
+                    <label>Username</label>
+                    <input type="text" id="new-username" placeholder="Username" required />
+                </div>
+                <button type="submit" class="btn btn-primary" style="padding: 0.75rem 2rem;">Add User</button>
+            </form>
+            <p id="form-msg" class="toggle-msg hidden" style="margin-top: 1rem;"></p>
+        </section>
+
+        <section class="card">
+            <h2 style="margin-bottom: 1.5rem;">Manage Members</h2>
+            <div class="user-table-wrap">
+                <table id="user-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-list-body">
+                        <!-- Loaded by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/admin.js"></script>
+</body>
+
+</html>
